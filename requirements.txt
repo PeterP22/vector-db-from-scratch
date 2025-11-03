@@ -1,0 +1,14 @@
+# Core dependencies
+numpy>=1.24.0
+scipy>=1.10.0
+
+# For benchmarking and visualization
+matplotlib>=3.7.0
+pandas>=2.0.0
+
+# For testing
+pytest>=7.3.0
+pytest-benchmark>=4.0.0
+
+# For type hints
+typing-extensions>=4.5.0
