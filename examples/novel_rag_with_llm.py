@@ -109,7 +109,7 @@ class KimiLLM:
         self,
         question: str,
         passages: List[Tuple[str, float, Dict]],
-        max_tokens: int = 2000,
+        max_tokens: int = 1000,
         stream: bool = False
     ):
         """Synthesize answer from retrieved passages.
@@ -158,7 +158,7 @@ Please provide a synthesized answer based on these passages."""
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.7,
+                temperature=0.3,
                 max_tokens=max_tokens,
                 stream=stream
             )
