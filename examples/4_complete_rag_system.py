@@ -396,7 +396,25 @@ class NvidiaReranker:
 
         print(f"Loading re-ranker: {model_name}...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+
+        # Use AutoModelForSequenceClassification for re-ranking models
+        try:
+            from transformers import AutoModelForSequenceClassification
+            self.model = AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                trust_remote_code=True
+            )
+        except Exception as e:
+            print(f"⚠️  Trying alternative loading method...")
+            # Fallback: Load with auto model and custom config
+            from transformers import AutoConfig
+            config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+            self.model = AutoModel.from_pretrained(
+                model_name,
+                config=config,
+                trust_remote_code=True
+            )
+
         self.model = self.model.to(device)
         self.model.eval()
         self.device = device
@@ -437,8 +455,18 @@ class NvidiaReranker:
 
                 # Get relevance score
                 outputs = self.model(**inputs)
-                # Use CLS token embedding as score (common practice)
-                score = outputs.last_hidden_state[:, 0, :].mean().item()
+
+                # Extract score from model output
+                if hasattr(outputs, 'logits'):
+                    # For classification models, use logits
+                    score = outputs.logits[0].max().item()
+                elif hasattr(outputs, 'last_hidden_state'):
+                    # For encoder models, use CLS token
+                    score = outputs.last_hidden_state[:, 0, :].mean().item()
+                else:
+                    # Fallback: use mean of all outputs
+                    score = outputs[0].mean().item()
+
                 scores.append(score)
 
         # Sort by score (highest first) and return top_k
