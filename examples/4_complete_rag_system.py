@@ -12,13 +12,15 @@ What you'll learn:
 RAG Components (all of them!):
 ✅ Document loading (PDF → chunks)
 ✅ Nvidia embeddings (GPU accelerated)
-✅ Vector search (HNSW index)
+✅ Vector search (HNSW index - retrieves top 15)
+✅ Re-ranking (Nvidia Nemotron - narrows to top 5)
 ✅ LLM synthesis (Kimi K2 Turbo)
 ✅ Streaming output (real-time responses)
 ✅ Smart caching (instant reload)
 
 What makes this "production-ready":
-- GPU acceleration (4x faster embeddings)
+- Two-stage retrieval (vector search + re-ranking)
+- GPU acceleration (4x faster embeddings & re-ranking)
 - Persistent caching (save time & money)
 - Streaming responses (better UX)
 - Customizable prompts (no code changes needed)
@@ -27,6 +29,8 @@ What makes this "production-ready":
 
 Key Concepts:
 - RAG: Retrieval-Augmented Generation (external knowledge for LLMs)
+- Two-stage retrieval: Fast vector search (15 candidates) → accurate re-ranking (top 5)
+- Re-ranking: Cross-attention model scores query-document pairs for better relevance
 - Streaming: Display tokens as they're generated
 - Prompt engineering: System/user prompts control LLM behavior
 - Temperature tuning: 0.3 = focused, 0.7 = creative
@@ -34,10 +38,11 @@ Key Concepts:
 Architecture:
 1. User asks question
 2. Embed question → search vector DB
-3. Retrieve top 5 most relevant passages
-4. Send passages + question to LLM
-5. LLM synthesizes coherent answer
-6. Stream answer back to user
+3. Retrieve top 15 candidate passages (HNSW)
+4. Re-rank candidates to top 5 (cross-attention model)
+5. Send top 5 passages + question to LLM
+6. LLM synthesizes coherent answer
+7. Stream answer back to user
 
 Setup:
     pip install torch transformers pypdf openai python-dotenv
@@ -361,6 +366,86 @@ class NvidiaEmbedder:
         return all_embeddings
 
 
+class NvidiaReranker:
+    """Nvidia Nemotron reranking model for improved retrieval."""
+
+    def __init__(
+        self,
+        model_name: str = "nvidia/llama-3.2-nv-rerankqa-1b-v2",
+        use_gpu: bool = True
+    ):
+        """Initialize reranker with GPU support.
+
+        Args:
+            model_name: Hugging Face model name
+            use_gpu: Whether to use GPU (Mac uses MPS, otherwise CUDA)
+        """
+        # Detect best device
+        if use_gpu:
+            if torch.backends.mps.is_available():
+                device = "mps"
+                print("🚀 Using Mac GPU for re-ranking")
+            elif torch.cuda.is_available():
+                device = "cuda"
+                print("🚀 Using NVIDIA GPU for re-ranking")
+            else:
+                device = "cpu"
+                print("⚠️  No GPU for re-ranker, using CPU")
+        else:
+            device = "cpu"
+
+        print(f"Loading re-ranker: {model_name}...")
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+        self.model = self.model.to(device)
+        self.model.eval()
+        self.device = device
+        self.model_name = model_name
+
+        print(f"✓ Re-ranker loaded")
+
+    def rerank(
+        self,
+        query: str,
+        documents: List[str],
+        top_k: int = 5
+    ) -> List[Tuple[int, float]]:
+        """Re-rank documents by relevance to query.
+
+        Args:
+            query: Search query
+            documents: List of document texts to re-rank
+            top_k: Number of top documents to return
+
+        Returns:
+            List of (document_index, score) tuples, sorted by score (descending)
+        """
+        scores = []
+
+        with torch.no_grad():
+            for doc in documents:
+                # Create query-document pair
+                inputs = self.tokenizer(
+                    query,
+                    doc,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=512
+                )
+                inputs = {k: v.to(self.device) for k, v in inputs.items()}
+
+                # Get relevance score
+                outputs = self.model(**inputs)
+                # Use CLS token embedding as score (common practice)
+                score = outputs.last_hidden_state[:, 0, :].mean().item()
+                scores.append(score)
+
+        # Sort by score (highest first) and return top_k
+        ranked = sorted(enumerate(scores), key=lambda x: x[1], reverse=True)
+        return ranked[:top_k]
+
+
 class NovelRAGWithLLM:
     """RAG system with Kimi LLM for answer synthesis."""
 
@@ -461,8 +546,13 @@ class NovelRAGWithLLM:
         print("-" * 80)
         self.llm = KimiLLM(model=kimi_model)
 
+        # Initialize Re-ranker
+        print("\nInitializing Re-ranker")
+        print("-" * 80)
+        self.reranker = NvidiaReranker(use_gpu=use_gpu)
+
         print("\n" + "=" * 80)
-        print("✅ RAG System with LLM Ready!")
+        print("✅ RAG System with LLM & Re-ranking Ready!")
         print("=" * 80)
 
     def query(self, question: str, k: int = 5, use_llm: bool = True) -> Dict:
@@ -528,19 +618,33 @@ class NovelRAGWithLLM:
 
             question_count += 1
 
-            # Retrieve passages
+            # Retrieve candidates
             print("\n🔍 Searching...")
             start_search = time.time()
             query_vector = self.embedder.embed(question)
-            result = self.index.search(query_vector, k=5)  # Retrieve top 5 passages
+            result = self.index.search(query_vector, k=15)  # Retrieve top 15 candidates
 
-            passages = []
+            # Extract candidate documents
+            candidates = []
+            candidate_metadata = []
             for i, dist in enumerate(result.distances):
                 meta = result.metadata[i]
-                similarity = 1 - dist
-                passages.append((meta["text"], similarity, meta))
+                candidates.append(meta["text"])
+                candidate_metadata.append(meta)
 
             search_time = time.time() - start_search
+
+            # Re-rank to top 5
+            print("🎯 Re-ranking...")
+            start_rerank = time.time()
+            reranked_indices = self.reranker.rerank(question, candidates, top_k=5)
+            rerank_time = time.time() - start_rerank
+
+            # Get final top 5 passages
+            passages = []
+            for doc_idx, score in reranked_indices:
+                meta = candidate_metadata[doc_idx]
+                passages.append((meta["text"], score, meta))
 
             # Stream LLM response
             print(f"\n{'='*80}")
@@ -571,19 +675,19 @@ class NovelRAGWithLLM:
                 print(f"\n\n⚠️  Response truncated (hit token limit). Try asking for a shorter answer.")
 
             llm_time = time.time() - start_llm
-            total_time = search_time + llm_time
+            total_time = search_time + rerank_time + llm_time
 
             print(f"\n\n{'='*80}")
-            print(f"⏱️  Search: {search_time*1000:.0f}ms | LLM: {llm_time:.1f}s | Total: {total_time:.1f}s")
+            print(f"⏱️  Search: {search_time*1000:.0f}ms | Re-rank: {rerank_time*1000:.0f}ms | LLM: {llm_time:.1f}s | Total: {total_time:.1f}s")
             print(f"{'='*80}")
 
             # Optionally show raw passages
             if show_raw_passages:
                 print(f"\n{'='*80}")
-                print("📚 Source Passages")
+                print("📚 Source Passages (Re-ranked)")
                 print(f"{'='*80}")
-                for i, (text, similarity, meta) in enumerate(passages, 1):
-                    print(f"\n{i}. Page {meta['page']} (Similarity: {similarity:.3f})")
+                for i, (text, rerank_score, meta) in enumerate(passages, 1):
+                    print(f"\n{i}. Page {meta['page']} (Re-rank Score: {rerank_score:.3f})")
                     print("-" * 80)
                     words = text.split()
                     display = ' '.join(words[:100]) + "..." if len(words) > 100 else text

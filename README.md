@@ -20,12 +20,14 @@ A complete production-grade vector database implementation from first principles
 - **HNSW (Hierarchical Navigable Small World)**: State-of-the-art graph-based search
 - **IVF (Inverted File Index)**: K-means clustering with multi-probe search
 
-### Advanced Embeddings
+### Advanced Embeddings & Re-ranking
 - **Nvidia Nemotron Integration**:
-  - `llama-3.2-nv-embedqa-1b-v2` (1B params, fast)
-  - `llama-embed-nemotron-8b` (8B params, best quality)
+  - `llama-3.2-nv-embedqa-1b-v2` (1B params, fast embeddings)
+  - `llama-embed-nemotron-8b` (8B params, best quality embeddings)
+  - `llama-3.2-nv-rerankqa-1b-v2` (1B params, re-ranking)
   - 2048-4096 dimensional embeddings
   - GPU acceleration (4x faster than CPU)
+  - Two-stage retrieval: Vector search → Re-ranking
 
 ### LLM Integration
 - **Kimi K2 Models**:
@@ -67,6 +69,7 @@ python examples/4_complete_rag_system.py
 
 **Features:**
 - ✅ Nvidia embeddings with Mac GPU acceleration
+- ✅ Two-stage retrieval: Vector search (15 candidates) → Re-ranking (top 5)
 - ✅ Kimi K2 LLM for synthesized answers
 - ✅ Streaming responses (see answers appear word-by-word)
 - ✅ Smart caching (instant reload after first run)
@@ -81,7 +84,7 @@ python examples/4_complete_rag_system.py
 Based on the passages from your novel, the main theme revolves around...
 [answer streams in real-time, citing specific pages]
 
-⏱️  Search: 155ms | LLM: 5.2s | Total: 5.4s
+⏱️  Search: 155ms | Re-rank: 230ms | LLM: 5.2s | Total: 5.6s
 ```
 
 ### 2. Learn the Basics - Algorithm Comparison
@@ -259,10 +262,11 @@ Note: On larger datasets (>100K vectors), HNSW and IVF significantly outperform 
 - SIMD optimizations
 - GPU acceleration (Mac MPS + NVIDIA CUDA)
 - Nvidia Nemotron embeddings
+- Nvidia re-ranking model (two-stage retrieval)
 - Kimi K2 LLM integration
 - Streaming responses
 - Smart caching system
-- Complete RAG pipeline
+- Complete RAG pipeline with re-ranking
 
 ### What's Missing (for production)
 - Persistence (save/load indexes)
