@@ -1,43 +1,102 @@
 # Vector Database from Scratch
 
-A complete implementation of a vector database built from first principles, featuring multiple indexing algorithms, compression techniques, and optimization strategies.
+A complete production-grade vector database implementation from first principles, featuring 5 search algorithms, state-of-the-art embeddings, and LLM integration for RAG applications.
 
-## Features
+## 🎯 What Makes This Special
 
-### Search Algorithms
+- **Built from Scratch**: Every algorithm implemented from first principles for deep understanding
+- **Production Embeddings**: Nvidia Nemotron models for high-quality vector representations
+- **LLM Integration**: Kimi K2 (Chinese LLM) for intelligent answer synthesis
+- **GPU Accelerated**: Mac Metal (MPS) and CUDA support for fast inference
+- **Complete RAG System**: Novel Q&A with streaming responses and smart caching
+- **Educational**: Extensive documentation showing how everything works under the hood
+
+## 🚀 Features
+
+### Search Algorithms (5 Implementations)
 - **Linear Scan**: Brute force baseline with 100% recall
 - **KD-Tree**: Binary space partitioning with dimension cycling and branch pruning
 - **LSH (Locality Sensitive Hashing)**: Random projection with multi-table strategy
 - **HNSW (Hierarchical Navigable Small World)**: State-of-the-art graph-based search
 - **IVF (Inverted File Index)**: K-means clustering with multi-probe search
 
+### Advanced Embeddings
+- **Nvidia Nemotron Integration**:
+  - `llama-3.2-nv-embedqa-1b-v2` (1B params, fast)
+  - `llama-embed-nemotron-8b` (8B params, best quality)
+  - 2048-4096 dimensional embeddings
+  - GPU acceleration (4x faster than CPU)
+
+### LLM Integration
+- **Kimi K2 Models**:
+  - `kimi-k2-turbo-preview` (60-100 tokens/s, high-speed)
+  - `kimi-k2-0905-preview` (256K context window)
+  - Streaming responses for real-time interaction
+  - OpenAI-compatible API
+
 ### Compression & Optimization
 - **Scalar Quantization**: 4x compression (float32 → uint8)
 - **Product Quantization**: 16-64x compression with subspace clustering
 - **SIMD Optimizations**: Vectorized distance computations (4-37x speedup)
 - **Asymmetric Distance Computation (ADC)**: Efficient PQ search
+- **Smart Caching**: Embeddings cached to disk for instant reload
 
-### Core Features
-- Distance metrics: L2/Euclidean, Cosine Similarity, Dot Product/MIPS
-- Metadata support for all indexes
-- Comprehensive benchmarking and statistics
-- Production-ready architecture with base classes
+### Production Features
+- **GPU Acceleration**: Mac Metal (MPS), NVIDIA CUDA support
+- **Interactive RAG**: Novel Q&A with streaming LLM responses
+- **Metadata Support**: Rich metadata filtering and search
+- **Comprehensive Benchmarking**: Performance metrics for all algorithms
+- **Production Architecture**: Clean base classes and modular design
 
 ## Quick Start
 
-### 1. Run the Document Demo
+### 1. Novel RAG with Kimi LLM (Recommended) ⭐
+
+The complete RAG experience with GPU acceleration, streaming responses, and intelligent answers:
+
+```bash
+# Install dependencies
+pip install torch transformers pypdf openai python-dotenv
+
+# Set up your API keys in .env
+echo "KIMI_API_KEY=your_api_key_here" >> .env
+
+# Run interactive RAG
+python examples/novel_rag_with_llm.py
+```
+
+**Features:**
+- ✅ Nvidia embeddings with Mac GPU acceleration
+- ✅ Kimi K2 LLM for synthesized answers
+- ✅ Streaming responses (see answers appear word-by-word)
+- ✅ Smart caching (instant reload after first run)
+- ✅ Interactive Q&A mode
+
+**Example:**
+```
+📖 Question: what is the main theme of the book?
+
+🤖 Kimi's Answer (streaming...)
+
+Based on the passages from your novel, the main theme revolves around...
+[answer streams in real-time, citing specific pages]
+
+⏱️  Search: 155ms | LLM: 5.2s | Total: 5.4s
+```
+
+### 2. Basic Document Demo
 
 ```bash
 python examples/document_demo.py
 ```
 
 This demo shows:
-- Document ingestion with embedding generation
+- Document ingestion with simple embedding generation
 - Building indexes with all 5 algorithms
 - Natural language query search
 - Performance comparison across algorithms
 
-### 2. Use Individual Indexes
+### 3. Use Individual Indexes
 
 ```python
 from src.indexes.hnsw import HNSW
@@ -60,7 +119,7 @@ for idx, dist, meta in zip(result.indices, result.distances, result.metadata):
     print(f"Document {meta['id']}: distance={dist:.4f}")
 ```
 
-### 3. Use Quantization
+### 4. Use Quantization
 
 ```python
 from src.quantization.scalar import ScalarQuantizer
@@ -82,10 +141,16 @@ distance_table = pq.compute_distance_table(query)
 distances = pq.adc_distance_batch(codes, distance_table)
 ```
 
-## Project Structure
+## 📁 Project Structure
 
 ```
 vector-db-from-scratch/
+├── examples/
+│   ├── document_demo.py          # Basic document search demo
+│   ├── novel_rag_with_llm.py     # Complete RAG with Kimi LLM ⭐
+│   ├── novel_rag_interactive.py  # Interactive RAG without LLM
+│   ├── nvidia_rag_demo.py        # Nvidia embeddings demo
+│   └── NVIDIA_SETUP.md          # Setup guide for Nvidia models
 ├── src/
 │   ├── core/               # Core utilities
 │   │   ├── base.py         # Base index interface
@@ -190,13 +255,18 @@ Note: On larger datasets (>100K vectors), HNSW and IVF significantly outperform 
 - Metadata support
 - Quantization techniques
 - SIMD optimizations
+- GPU acceleration (Mac MPS + NVIDIA CUDA)
+- Nvidia Nemotron embeddings
+- Kimi K2 LLM integration
+- Streaming responses
+- Smart caching system
+- Complete RAG pipeline
 
 ### What's Missing (for production)
 - Persistence (save/load indexes)
 - Metadata filtering
 - Deletion and updates
 - Multi-threading
-- GPU acceleration
 - Distributed search
 - API layer (REST/gRPC)
 
@@ -254,16 +324,19 @@ This implementation is based on research and production systems:
 - **HNSW**: Malkov & Yashunin (2018) - "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs"
 - **IVF**: Jégou et al. (2011) - "Product quantization for nearest neighbor search"
 - **LSH**: Charikar (2002) - "Similarity estimation techniques from rounding algorithms"
+- **Nvidia Nemotron**: [NVIDIA RAG Collection](https://huggingface.co/collections/nvidia/nemotron-rag)
+- **Kimi K2**: [Moonshot AI Platform](https://platform.moonshot.ai/docs/guide/kimi-k2-quickstart)
 - **Production Systems**: FAISS, Weaviate, Qdrant, Milvus, pgvector
 
 ## Next Steps
 
-1. **Use Real Embeddings**: Replace `SimpleEmbedder` with sentence-transformers or OpenAI
-2. **Scale Up**: Test with larger datasets (100K-1M vectors)
-3. **Add Persistence**: Implement save/load for indexes
-4. **Metadata Filtering**: Add pre/post filtering support
-5. **API Layer**: Wrap in FastAPI for REST interface
-6. **Benchmarking**: Compare against FAISS or Annoy
+1. ~~**Use Real Embeddings**~~: ✅ Implemented with Nvidia Nemotron models
+2. ~~**LLM Integration**~~: ✅ Implemented with Kimi K2 streaming responses
+3. **Scale Up**: Test with larger datasets (100K-1M vectors)
+4. **Add Persistence**: Implement save/load for indexes
+5. **Metadata Filtering**: Add pre/post filtering support
+6. **API Layer**: Wrap in FastAPI for REST interface
+7. **Benchmarking**: Compare against FAISS or Annoy
 
 ## License
 

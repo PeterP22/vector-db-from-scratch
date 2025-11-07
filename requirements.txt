@@ -12,3 +12,9 @@ pytest-benchmark>=4.0.0
 
 # For type hints
 typing-extensions>=4.5.0
+
+# Optional: For Nvidia Nemotron RAG integration (nvidia_rag_demo.py)
+# Install with: pip install torch transformers huggingface-hub
+# torch>=2.0.0
+# transformers>=4.35.0
+# huggingface-hub>=0.19.0
