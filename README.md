@@ -87,6 +87,12 @@ Based on the passages from your novel, the main theme revolves around...
 ⏱️  Search: 155ms | Re-rank: 230ms | LLM: 5.2s | Total: 5.6s
 ```
 
+#### Nvidia Re-ranker Requirements
+- **Trust remote code**: the Nemotron reranker ships a custom `llama_bidirectional_model` implementation. `examples/4_complete_rag_system.py` automatically enables `trust_remote_code=True`, but Hugging Face will prompt the first time—answer “yes” to allow the custom module to run.
+- **Allow large downloads**: the reranker checkpoint is ~2.5 GB. Make sure you have disk space in `~/.cache/huggingface`.
+- **GPU strongly recommended**: works on Apple MPS and CUDA. You can set `use_gpu=False` in `NvidiaReranker` if you must fall back to CPU, but latency will be much higher.
+- **Optional Hugging Face login**: if the NVIDIA repo is gated for your account, run `huggingface-cli login` once before launching the example.
+
 ### 2. Learn the Basics - Algorithm Comparison
 
 ```bash
