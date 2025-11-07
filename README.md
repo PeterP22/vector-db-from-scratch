@@ -151,6 +151,10 @@ vector-db-from-scratch/
 │   ├── novel_rag_interactive.py  # Interactive RAG without LLM
 │   ├── nvidia_rag_demo.py        # Nvidia embeddings demo
 │   └── NVIDIA_SETUP.md          # Setup guide for Nvidia models
+├── prompts/
+│   ├── system_prompt.txt         # LLM system prompt (easily customizable)
+│   ├── user_prompt_template.txt  # User query template
+│   └── README.md                 # Prompt engineering guide
 ├── src/
 │   ├── core/               # Core utilities
 │   │   ├── base.py         # Base index interface
@@ -168,8 +172,6 @@ vector-db-from-scratch/
 │   │   └── simd_ops.py     # SIMD operations
 │   └── utils/              # Utilities
 │       └── data_generator.py
-├── examples/
-│   └── document_demo.py    # End-to-end demo
 ├── PLAN.md                 # Detailed implementation plan
 └── README.md              # This file
 ```

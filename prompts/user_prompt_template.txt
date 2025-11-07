@@ -1,0 +1,7 @@
+Question: {question}
+
+Relevant passages from the book:
+
+{context}
+
+Please provide a synthesized answer based on these passages.

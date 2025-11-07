@@ -29,6 +29,23 @@ import pickle
 from pathlib import Path
 
 from src.core.vector import Vector
+
+
+def load_prompt(prompt_name: str) -> str:
+    """Load prompt from prompts directory.
+
+    Args:
+        prompt_name: Name of prompt file (e.g., 'system_prompt.txt')
+
+    Returns:
+        Prompt text
+    """
+    # Get project root (parent of examples/)
+    project_root = Path(__file__).parent.parent
+    prompt_path = project_root / "prompts" / prompt_name
+
+    with open(prompt_path, 'r') as f:
+        return f.read().strip()
 from src.indexes.hnsw import HNSW
 
 # Load environment variables
@@ -131,24 +148,12 @@ class KimiLLM:
 
         context = "\n".join(context_parts)
 
-        # Create prompt
-        system_prompt = """You are a helpful AI assistant analyzing a book. Your task is to answer questions based on the provided passages from the book.
+        # Load prompts from files
+        system_prompt = load_prompt("system_prompt.txt")
+        user_prompt_template = load_prompt("user_prompt_template.txt")
 
-Instructions:
-- Synthesize information from the passages to provide a comprehensive answer
-- If the passages contain relevant information, use it to answer the question
-- Cite page numbers when referencing specific information
-- If the passages don't contain enough information to answer fully, say so
-- Be concise but thorough
-- Write in a conversational, helpful tone"""
-
-        user_prompt = f"""Question: {question}
-
-Relevant passages from the book:
-
-{context}
-
-Please provide a synthesized answer based on these passages."""
+        # Format user prompt with question and context
+        user_prompt = user_prompt_template.format(question=question, context=context)
 
         # Call Kimi API
         try:
