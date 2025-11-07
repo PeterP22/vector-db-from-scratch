@@ -107,7 +107,13 @@ except ImportError:
     print("Warning: python-dotenv not installed. Install with: pip install python-dotenv")
 
 try:
-    from transformers import AutoTokenizer, AutoModel
+    from transformers import (
+        AutoTokenizer,
+        AutoModel,
+        AutoModelForSequenceClassification,
+        AutoConfig,
+    )
+    from transformers.dynamic_module_utils import get_class_from_dynamic_module
     import torch
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
@@ -395,69 +401,102 @@ class NvidiaReranker:
             device = "cpu"
 
         print(f"Loading re-ranker: {model_name}...")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
-        # This model uses a custom LlamaBidirectionalModel architecture
-        # Load config first to download custom model code
-        from transformers import AutoConfig
+        # Download config so that any custom modeling code is pulled as well
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        model_type = getattr(config, "model_type", "unknown")
+        auto_map = getattr(config, "auto_map", None)
+        print(f"Model config: {model_type}")
+        print(f"Auto map: {auto_map if auto_map else 'None'}")
 
-        # The config's auto_map tells us which class to use
-        print(f"Model config: {config.model_type}")
-        print(f"Auto map: {config.auto_map if hasattr(config, 'auto_map') else 'None'}")
+        custom_class_ref = None
+        if isinstance(auto_map, dict):
+            custom_class_ref = (
+                auto_map.get("AutoModelForSequenceClassification")
+                or auto_map.get("AutoModel")
+            )
 
-        # Get the custom model class from auto_map
-        # Try different keys that might be in auto_map
-        model_class_ref = None
-        if hasattr(config, 'auto_map'):
-            # Try AutoModelForSequenceClassification first (for re-ranking models)
-            if 'AutoModelForSequenceClassification' in config.auto_map:
-                model_class_ref = config.auto_map['AutoModelForSequenceClassification']
-            elif 'AutoModel' in config.auto_map:
-                model_class_ref = config.auto_map['AutoModel']
+        if not custom_class_ref:
+            raise RuntimeError(
+                "Model does not define AutoModelForSequenceClassification/AutoModel in auto_map; cannot load custom re-ranker."
+            )
 
-        if model_class_ref:
-            print(f"Loading custom model: {model_class_ref}")
+        print(f"Loading custom model: {custom_class_ref}")
 
-            # Import the module containing the custom class
-            # Format is usually: module_name.ClassName
-            parts = model_class_ref.split('.')
-            module_name = '.'.join(parts[:-1])
-            class_name = parts[-1]
+        # Use Hugging Face dynamic module loader so we don't have to guess local cache paths.
+        code_revision = getattr(config, "_commit_hash", None)
+        try:
+            ModelClass = get_class_from_dynamic_module(
+                custom_class_ref,
+                model_name,
+                revision=code_revision,
+                code_revision=code_revision,
+            )
+        except Exception as import_error:
+            raise RuntimeError(
+                f"Failed to import custom re-ranker class {custom_class_ref}: {import_error}"
+            ) from import_error
 
-            # Find and import the module from transformers_modules
-            import glob
-            import os
-            from pathlib import Path
+        base_model_class_ref = None
+        if isinstance(auto_map, dict):
+            base_model_class_ref = auto_map.get("AutoModel")
+        module_prefix = custom_class_ref.rsplit(".", 1)[0]
+        if not base_model_class_ref:
+            base_model_class_ref = f"{module_prefix}.LlamaBidirectionalModel"
 
-            # Find the transformers_modules directory
-            import transformers
-            transformers_path = Path(transformers.__file__).parent.parent / "transformers_modules"
+        try:
+            BaseModelClass = get_class_from_dynamic_module(
+                base_model_class_ref,
+                model_name,
+                revision=code_revision,
+                code_revision=code_revision,
+            )
+        except Exception as import_error:
+            raise RuntimeError(
+                f"Failed to import custom base model class {base_model_class_ref}: {import_error}"
+            ) from import_error
 
-            # Search for the module
-            search_pattern = str(transformers_path / "nvidia" / "llama-3.2-nv-rerankqa-1b-v2" / "*" / f"{module_name}.py")
-            matching_files = glob.glob(search_pattern)
+        # Register the custom config/model mappings so HF's AutoModel machinery (used inside GenericForSequenceClassification)
+        # can instantiate the bidirectional backbone without raising.
+        try:
+            AutoConfig.register(
+                config.model_type,
+                config.__class__,
+                exist_ok=True,
+            )
+        except ValueError:
+            pass
 
-            if matching_files:
-                # Get the directory containing the module
-                module_dir = Path(matching_files[0]).parent
-                module_hash = module_dir.name
+        try:
+            AutoModel.register(
+                config.__class__,
+                BaseModelClass,
+                exist_ok=True,
+            )
+        except ValueError:
+            pass
 
-                # Construct full module path
-                full_module_path = f"transformers_modules.nvidia.llama-3.2-nv-rerankqa-1b-v2.{module_hash}.{module_name}"
+        try:
+            AutoModelForSequenceClassification.register(
+                config.__class__,
+                ModelClass,
+                exist_ok=True,
+            )
+        except ValueError:
+            pass
 
-                print(f"Importing {class_name} from {full_module_path}")
-
-                import importlib
-                model_module = importlib.import_module(full_module_path)
-                ModelClass = getattr(model_module, class_name)
-
-                print(f"✓ Loaded custom model class")
-                self.model = ModelClass.from_pretrained(model_name, trust_remote_code=True)
-            else:
-                raise RuntimeError(f"Could not find custom model module {module_name} in transformers_modules")
-        else:
-            raise RuntimeError(f"Model does not have compatible auto_map. Available keys: {list(config.auto_map.keys()) if hasattr(config, 'auto_map') else 'None'}")
+        try:
+            self.model = ModelClass.from_pretrained(
+                model_name,
+                config=config,
+                trust_remote_code=True,
+            )
+        except Exception as load_error:
+            raise RuntimeError(
+                f"Failed to load custom re-ranker weights for {model_name}: {load_error}"
+            ) from load_error
+        print("✓ Loaded custom re-ranker from dynamic module")
 
         self.model = self.model.to(device)
         self.model.eval()
