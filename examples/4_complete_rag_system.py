@@ -397,57 +397,59 @@ class NvidiaReranker:
         print(f"Loading re-ranker: {model_name}...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        # Load model with custom architecture using trust_remote_code
-        # This model uses LlamaBidirectionalModel which requires special handling
-        try:
-            # First try: AutoModelForSequenceClassification
-            from transformers import AutoModelForSequenceClassification
-            self.model = AutoModelForSequenceClassification.from_pretrained(
-                model_name,
-                trust_remote_code=True
-            )
-            print("✓ Loaded with AutoModelForSequenceClassification")
-        except Exception as e1:
-            try:
-                # Second try: Load config and use from_pretrained with it
-                print(f"⚠️  Trying alternative loading method...")
-                from transformers import AutoConfig, AutoModelForCausalLM
-                config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        # This model uses a custom LlamaBidirectionalModel architecture
+        # Load config first to download custom model code
+        from transformers import AutoConfig
+        config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
 
-                # Try loading with the downloaded custom model code
-                # The model files include llama_bidirectional_model.py
-                self.model = AutoModelForCausalLM.from_pretrained(
-                    model_name,
-                    config=config,
-                    trust_remote_code=True
-                )
-                print("✓ Loaded with custom config")
-            except Exception as e2:
-                # Final fallback: Load manually by importing the custom class
-                print(f"⚠️  Using direct import method...")
-                from transformers import AutoConfig
+        # The config's auto_map tells us which class to use
+        print(f"Model config: {config.model_type}")
+        print(f"Auto map: {config.auto_map if hasattr(config, 'auto_map') else 'None'}")
 
-                # Load config to trigger download of custom files
-                config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        # Get the custom model class from auto_map
+        if hasattr(config, 'auto_map') and 'AutoModel' in config.auto_map:
+            model_class_ref = config.auto_map['AutoModel']
+            print(f"Loading custom model: {model_class_ref}")
 
-                # Import the custom model class (after download)
+            # Import the module containing the custom class
+            # Format is usually: module_name.ClassName
+            parts = model_class_ref.split('.')
+            module_name = '.'.join(parts[:-1])
+            class_name = parts[-1]
+
+            # Find and import the module from transformers_modules
+            import glob
+            import os
+            from pathlib import Path
+
+            # Find the transformers_modules directory
+            import transformers
+            transformers_path = Path(transformers.__file__).parent.parent / "transformers_modules"
+
+            # Search for the module
+            search_pattern = str(transformers_path / "nvidia" / "llama-3.2-nv-rerankqa-1b-v2" / "*" / f"{module_name}.py")
+            matching_files = glob.glob(search_pattern)
+
+            if matching_files:
+                # Get the directory containing the module
+                module_dir = Path(matching_files[0]).parent
+                module_hash = module_dir.name
+
+                # Construct full module path
+                full_module_path = f"transformers_modules.nvidia.llama-3.2-nv-rerankqa-1b-v2.{module_hash}.{module_name}"
+
+                print(f"Importing {class_name} from {full_module_path}")
+
                 import importlib
-                import sys
+                model_module = importlib.import_module(full_module_path)
+                ModelClass = getattr(model_module, class_name)
 
-                # Find the transformers_modules path
-                from transformers import file_utils
-                module_path = file_utils.get_cached_dir(model_name)
-
-                # This will work after the files are downloaded
-                from huggingface_hub import hf_hub_download
-                import os
-
-                # Direct load with trust_remote_code should work
-                from transformers import PreTrainedModel
-                self.model = PreTrainedModel.from_pretrained(
-                    model_name,
-                    trust_remote_code=True
-                )
+                print(f"✓ Loaded custom model class")
+                self.model = ModelClass.from_pretrained(model_name, trust_remote_code=True)
+            else:
+                raise RuntimeError(f"Could not find custom model module {module_name} in transformers_modules")
+        else:
+            raise RuntimeError("Model does not have auto_map configuration")
 
         self.model = self.model.to(device)
         self.model.eval()
