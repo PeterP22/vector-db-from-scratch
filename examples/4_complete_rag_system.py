@@ -397,23 +397,57 @@ class NvidiaReranker:
         print(f"Loading re-ranker: {model_name}...")
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
 
-        # Use AutoModelForSequenceClassification for re-ranking models
+        # Load model with custom architecture using trust_remote_code
+        # This model uses LlamaBidirectionalModel which requires special handling
         try:
+            # First try: AutoModelForSequenceClassification
             from transformers import AutoModelForSequenceClassification
             self.model = AutoModelForSequenceClassification.from_pretrained(
                 model_name,
                 trust_remote_code=True
             )
-        except Exception as e:
-            print(f"⚠️  Trying alternative loading method...")
-            # Fallback: Load with auto model and custom config
-            from transformers import AutoConfig
-            config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
-            self.model = AutoModel.from_pretrained(
-                model_name,
-                config=config,
-                trust_remote_code=True
-            )
+            print("✓ Loaded with AutoModelForSequenceClassification")
+        except Exception as e1:
+            try:
+                # Second try: Load config and use from_pretrained with it
+                print(f"⚠️  Trying alternative loading method...")
+                from transformers import AutoConfig, AutoModelForCausalLM
+                config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+
+                # Try loading with the downloaded custom model code
+                # The model files include llama_bidirectional_model.py
+                self.model = AutoModelForCausalLM.from_pretrained(
+                    model_name,
+                    config=config,
+                    trust_remote_code=True
+                )
+                print("✓ Loaded with custom config")
+            except Exception as e2:
+                # Final fallback: Load manually by importing the custom class
+                print(f"⚠️  Using direct import method...")
+                from transformers import AutoConfig
+
+                # Load config to trigger download of custom files
+                config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+
+                # Import the custom model class (after download)
+                import importlib
+                import sys
+
+                # Find the transformers_modules path
+                from transformers import file_utils
+                module_path = file_utils.get_cached_dir(model_name)
+
+                # This will work after the files are downloaded
+                from huggingface_hub import hf_hub_download
+                import os
+
+                # Direct load with trust_remote_code should work
+                from transformers import PreTrainedModel
+                self.model = PreTrainedModel.from_pretrained(
+                    model_name,
+                    trust_remote_code=True
+                )
 
         self.model = self.model.to(device)
         self.model.eval()
@@ -574,13 +608,23 @@ class NovelRAGWithLLM:
         print("-" * 80)
         self.llm = KimiLLM(model=kimi_model)
 
-        # Initialize Re-ranker
+        # Initialize Re-ranker (optional)
         print("\nInitializing Re-ranker")
         print("-" * 80)
-        self.reranker = NvidiaReranker(use_gpu=use_gpu)
+        try:
+            self.reranker = NvidiaReranker(use_gpu=use_gpu)
+            self.use_reranking = True
+        except Exception as e:
+            print(f"⚠️  Could not load re-ranker: {e}")
+            print("⚠️  Continuing without re-ranking (will use vector search only)")
+            self.reranker = None
+            self.use_reranking = False
 
         print("\n" + "=" * 80)
-        print("✅ RAG System with LLM & Re-ranking Ready!")
+        if self.use_reranking:
+            print("✅ RAG System with LLM & Re-ranking Ready!")
+        else:
+            print("✅ RAG System with LLM Ready! (No re-ranking)")
         print("=" * 80)
 
     def query(self, question: str, k: int = 5, use_llm: bool = True) -> Dict:
@@ -650,29 +694,44 @@ class NovelRAGWithLLM:
             print("\n🔍 Searching...")
             start_search = time.time()
             query_vector = self.embedder.embed(question)
-            result = self.index.search(query_vector, k=15)  # Retrieve top 15 candidates
 
-            # Extract candidate documents
-            candidates = []
-            candidate_metadata = []
-            for i, dist in enumerate(result.distances):
-                meta = result.metadata[i]
-                candidates.append(meta["text"])
-                candidate_metadata.append(meta)
+            if self.use_reranking:
+                # Two-stage retrieval: Get more candidates for re-ranking
+                result = self.index.search(query_vector, k=15)
 
-            search_time = time.time() - start_search
+                # Extract candidate documents
+                candidates = []
+                candidate_metadata = []
+                for i, dist in enumerate(result.distances):
+                    meta = result.metadata[i]
+                    candidates.append(meta["text"])
+                    candidate_metadata.append(meta)
 
-            # Re-rank to top 5
-            print("🎯 Re-ranking...")
-            start_rerank = time.time()
-            reranked_indices = self.reranker.rerank(question, candidates, top_k=5)
-            rerank_time = time.time() - start_rerank
+                search_time = time.time() - start_search
 
-            # Get final top 5 passages
-            passages = []
-            for doc_idx, score in reranked_indices:
-                meta = candidate_metadata[doc_idx]
-                passages.append((meta["text"], score, meta))
+                # Re-rank to top 5
+                print("🎯 Re-ranking...")
+                start_rerank = time.time()
+                reranked_indices = self.reranker.rerank(question, candidates, top_k=5)
+                rerank_time = time.time() - start_rerank
+
+                # Get final top 5 passages
+                passages = []
+                for doc_idx, score in reranked_indices:
+                    meta = candidate_metadata[doc_idx]
+                    passages.append((meta["text"], score, meta))
+            else:
+                # Direct retrieval: Get top 5 from vector search
+                result = self.index.search(query_vector, k=5)
+
+                passages = []
+                for i, dist in enumerate(result.distances):
+                    meta = result.metadata[i]
+                    similarity = 1 - dist
+                    passages.append((meta["text"], similarity, meta))
+
+                search_time = time.time() - start_search
+                rerank_time = 0  # No re-ranking
 
             # Stream LLM response
             print(f"\n{'='*80}")
@@ -706,16 +765,23 @@ class NovelRAGWithLLM:
             total_time = search_time + rerank_time + llm_time
 
             print(f"\n\n{'='*80}")
-            print(f"⏱️  Search: {search_time*1000:.0f}ms | Re-rank: {rerank_time*1000:.0f}ms | LLM: {llm_time:.1f}s | Total: {total_time:.1f}s")
+            if self.use_reranking:
+                print(f"⏱️  Search: {search_time*1000:.0f}ms | Re-rank: {rerank_time*1000:.0f}ms | LLM: {llm_time:.1f}s | Total: {total_time:.1f}s")
+            else:
+                print(f"⏱️  Search: {search_time*1000:.0f}ms | LLM: {llm_time:.1f}s | Total: {total_time:.1f}s")
             print(f"{'='*80}")
 
             # Optionally show raw passages
             if show_raw_passages:
                 print(f"\n{'='*80}")
-                print("📚 Source Passages (Re-ranked)")
+                if self.use_reranking:
+                    print("📚 Source Passages (Re-ranked)")
+                else:
+                    print("📚 Source Passages")
                 print(f"{'='*80}")
-                for i, (text, rerank_score, meta) in enumerate(passages, 1):
-                    print(f"\n{i}. Page {meta['page']} (Re-rank Score: {rerank_score:.3f})")
+                for i, (text, score, meta) in enumerate(passages, 1):
+                    score_label = "Re-rank Score" if self.use_reranking else "Similarity"
+                    print(f"\n{i}. Page {meta['page']} ({score_label}: {score:.3f})")
                     print("-" * 80)
                     words = text.split()
                     display = ' '.join(words[:100]) + "..." if len(words) > 100 else text
