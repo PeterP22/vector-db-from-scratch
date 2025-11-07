@@ -62,7 +62,7 @@ pip install torch transformers pypdf openai python-dotenv
 echo "KIMI_API_KEY=your_api_key_here" >> .env
 
 # Run interactive RAG
-python examples/novel_rag_with_llm.py
+python examples/4_complete_rag_system.py
 ```
 
 **Features:**
@@ -84,17 +84,17 @@ Based on the passages from your novel, the main theme revolves around...
 ⏱️  Search: 155ms | LLM: 5.2s | Total: 5.4s
 ```
 
-### 2. Basic Document Demo
+### 2. Learn the Basics - Algorithm Comparison
 
 ```bash
-python examples/document_demo.py
+python examples/1_basic_index_comparison.py
 ```
 
 This demo shows:
 - Document ingestion with simple embedding generation
-- Building indexes with all 5 algorithms
+- Building indexes with all 5 algorithms (Linear, KD-Tree, LSH, HNSW, IVF)
 - Natural language query search
-- Performance comparison across algorithms
+- Performance comparison and benchmarks
 
 ### 3. Use Individual Indexes
 
@@ -145,12 +145,12 @@ distances = pq.adc_distance_batch(codes, distance_table)
 
 ```
 vector-db-from-scratch/
-├── examples/
-│   ├── document_demo.py          # Basic document search demo
-│   ├── novel_rag_with_llm.py     # Complete RAG with Kimi LLM ⭐
-│   ├── novel_rag_interactive.py  # Interactive RAG without LLM
-│   ├── nvidia_rag_demo.py        # Nvidia embeddings demo
-│   └── NVIDIA_SETUP.md          # Setup guide for Nvidia models
+├── examples/                      # Learning path: 1 → 2 → 3 → 4
+│   ├── 1_basic_index_comparison.py    # All 5 algorithms comparison
+│   ├── 2_nvidia_embeddings_demo.py    # Production embeddings
+│   ├── 3_rag_retrieval_only.py        # RAG without LLM synthesis
+│   ├── 4_complete_rag_system.py       # Full RAG with streaming LLM ⭐
+│   └── NVIDIA_SETUP.md                # Setup guide for Nvidia models
 ├── prompts/
 │   ├── system_prompt.txt         # LLM system prompt (easily customizable)
 │   ├── user_prompt_template.txt  # User query template
@@ -301,9 +301,33 @@ Note: On larger datasets (>100K vectors), HNSW and IVF significantly outperform 
 - Multi-probe search
 - Inverted lists structure
 
+## Learning Path
+
+The examples are numbered to guide you from basics to production:
+
+**1️⃣ Start Here** - Compare all 5 search algorithms:
+```bash
+python examples/1_basic_index_comparison.py
+```
+
+**2️⃣ Production Embeddings** - Learn Nvidia Nemotron integration:
+```bash
+python examples/2_nvidia_embeddings_demo.py
+```
+
+**3️⃣ RAG Retrieval** - Build retrieval without LLM synthesis:
+```bash
+python examples/3_rag_retrieval_only.py
+```
+
+**4️⃣ Complete RAG** - Full system with streaming LLM:
+```bash
+python examples/4_complete_rag_system.py
+```
+
 ## Testing
 
-Each implementation includes comprehensive tests:
+Individual components include test functions:
 
 ```bash
 # Test scalar quantization
@@ -314,9 +338,6 @@ python src/quantization/product.py
 
 # Test SIMD speedups
 python src/quantization/simd_ops.py
-
-# Test document demo
-python examples/document_demo.py
 ```
 
 ## References

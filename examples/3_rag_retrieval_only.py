@@ -1,12 +1,34 @@
-"""Interactive RAG System for Your Novel with GPU Support and Caching.
+"""Example 3: RAG (Retrieval-Augmented Generation) - Retrieval Only
+
+What you'll learn:
+- Building a complete RAG retrieval pipeline
+- PDF document loading and intelligent chunking
+- Embedding caching (instant reload on second run)
+- Interactive Q&A with retrieved passages
+- HNSW index for fast semantic search
+
+RAG Components (this example):
+✅ Document loading (PDF → text chunks)
+✅ Embedding generation (with caching)
+✅ Vector search (retrieve top-K passages)
+❌ LLM synthesis (see next example for this!)
+
+Key Concepts:
+- Document chunking: Breaking long text into searchable pieces
+- Overlap strategy: Avoiding context loss at chunk boundaries
+- Smart caching: Save embeddings to disk (huge time saver!)
+- Top-K retrieval: Get most relevant passages for a query
 
 Features:
-- Mac GPU support (Apple Silicon MPS)
-- Caches embeddings to disk (only embed once!)
+- GPU acceleration (Mac MPS or NVIDIA CUDA)
+- Persistent caching (~2s load vs 50s regeneration)
 - Interactive Q&A mode
 
-Usage:
-    python examples/novel_rag_interactive.py
+Prerequisites:
+    pip install torch transformers pypdf
+
+Previous: 2_nvidia_embeddings_demo.py (production embeddings)
+Next: 4_complete_rag_system.py (add LLM for answer synthesis!)
 """
 
 import sys

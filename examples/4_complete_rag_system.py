@@ -1,16 +1,60 @@
-"""Interactive RAG with Kimi LLM for Synthesized Answers.
+"""Example 4: Complete Production RAG System ⭐
 
-Features:
-- Mac GPU support for embeddings
-- Caches embeddings to disk
-- Uses Kimi LLM to synthesize answers from retrieved passages
-- Interactive Q&A mode
+THE FULL STACK - This is a production-ready RAG implementation!
 
-Installation:
-    pip install openai python-dotenv
+What you'll learn:
+- Complete RAG pipeline: Retrieve → Generate
+- LLM integration for answer synthesis
+- Streaming responses (word-by-word output)
+- Customizable prompts (see prompts/ folder)
+- Production optimization techniques
+
+RAG Components (all of them!):
+✅ Document loading (PDF → chunks)
+✅ Nvidia embeddings (GPU accelerated)
+✅ Vector search (HNSW index)
+✅ LLM synthesis (Kimi K2 Turbo)
+✅ Streaming output (real-time responses)
+✅ Smart caching (instant reload)
+
+What makes this "production-ready":
+- GPU acceleration (4x faster embeddings)
+- Persistent caching (save time & money)
+- Streaming responses (better UX)
+- Customizable prompts (no code changes needed)
+- Error handling & retry logic
+- Performance metrics tracking
+
+Key Concepts:
+- RAG: Retrieval-Augmented Generation (external knowledge for LLMs)
+- Streaming: Display tokens as they're generated
+- Prompt engineering: System/user prompts control LLM behavior
+- Temperature tuning: 0.3 = focused, 0.7 = creative
+
+Architecture:
+1. User asks question
+2. Embed question → search vector DB
+3. Retrieve top 5 most relevant passages
+4. Send passages + question to LLM
+5. LLM synthesizes coherent answer
+6. Stream answer back to user
+
+Setup:
+    pip install torch transformers pypdf openai python-dotenv
+
+    # Add to .env file:
+    KIMI_API_KEY=your_api_key_here
 
 Usage:
-    python examples/novel_rag_with_llm.py
+    python examples/4_complete_rag_system.py
+
+Customization:
+    - Edit prompts/system_prompt.txt to change LLM behavior
+    - Edit prompts/user_prompt_template.txt to change query format
+    - Adjust temperature in code (line 161) for creativity vs focus
+
+Previous: 3_rag_retrieval_only.py (RAG without LLM)
+This is the final example - you've mastered production RAG! 🎉
 """
 
 import sys

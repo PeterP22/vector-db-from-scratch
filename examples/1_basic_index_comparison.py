@@ -1,18 +1,25 @@
-"""Document Ingestion and Query Demo.
+"""Example 1: Basic Index Comparison
 
-This demo shows a complete end-to-end workflow:
-1. Load documents from text files
-2. Generate embeddings (using sentence-transformers or mock embeddings)
-3. Build indexes using different algorithms (Linear, KD-Tree, LSH, HNSW, IVF)
+START HERE - This is your introduction to vector databases!
+
+What you'll learn:
+1. How to load and process documents
+2. Generate embeddings (vector representations)
+3. Build indexes with all 5 search algorithms:
+   - Linear Scan (brute force, 100% recall)
+   - KD-Tree (binary space partitioning)
+   - LSH (locality sensitive hashing)
+   - HNSW (graph-based, production favorite)
+   - IVF (inverted file index, clustering-based)
 4. Run natural language queries
-5. Compare performance and recall across algorithms
+5. Compare performance: speed vs accuracy trade-offs
 
-Production Note:
-    In production, you'd use:
-    - sentence-transformers, OpenAI embeddings, or Cohere embeddings
-    - Persistent storage (SQLite, PostgreSQL, Redis)
-    - Metadata filtering and hybrid search
-    - API layer (FastAPI, Flask)
+Key Concepts:
+- Embedding: Converting text to numbers (vectors)
+- Similarity: Finding "close" vectors = semantically similar text
+- Trade-offs: Exact search (slow, 100% recall) vs approximate (fast, 90-99% recall)
+
+Next: See 2_nvidia_embeddings_demo.py for production-quality embeddings
 """
 
 import sys

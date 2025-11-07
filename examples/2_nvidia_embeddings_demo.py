@@ -1,12 +1,25 @@
-"""Nvidia Nemotron RAG Integration Demo.
+"""Example 2: Production-Quality Embeddings with Nvidia Nemotron
 
-This demo shows how to use Nvidia's new Nemotron RAG models with your vector database:
-- llama-embed-nemotron-8b: High-quality embeddings
-- llama-3.2-nv-embedqa-1b-v2: Lightweight QA embeddings
-- llama-3.2-nv-rerankqa-1b-v2: Reranking for improved results
+What you'll learn:
+- Moving from simple embeddings to state-of-the-art models
+- Using Nvidia's Nemotron models (1B and 8B parameter versions)
+- GPU acceleration (Mac MPS or NVIDIA CUDA)
+- Comparing different embedding model sizes
 
-Installation:
-    pip install torch transformers sentence-transformers
+Models demonstrated:
+- llama-3.2-nv-embedqa-1b-v2: Fast, lightweight (2048 dims)
+- llama-embed-nemotron-8b: Best quality (4096 dims)
+
+Key Concepts:
+- Transformer models: BERT/LLaMA-based embeddings
+- GPU acceleration: 4x faster than CPU
+- Model size trade-offs: Speed vs quality
+
+Prerequisites:
+    pip install torch transformers
+
+Previous: 1_basic_index_comparison.py (understand the basics first)
+Next: 3_rag_retrieval_only.py (build a RAG system)
 """
 
 import sys
