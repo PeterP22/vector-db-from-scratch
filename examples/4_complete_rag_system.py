@@ -407,8 +407,16 @@ class NvidiaReranker:
         print(f"Auto map: {config.auto_map if hasattr(config, 'auto_map') else 'None'}")
 
         # Get the custom model class from auto_map
-        if hasattr(config, 'auto_map') and 'AutoModel' in config.auto_map:
-            model_class_ref = config.auto_map['AutoModel']
+        # Try different keys that might be in auto_map
+        model_class_ref = None
+        if hasattr(config, 'auto_map'):
+            # Try AutoModelForSequenceClassification first (for re-ranking models)
+            if 'AutoModelForSequenceClassification' in config.auto_map:
+                model_class_ref = config.auto_map['AutoModelForSequenceClassification']
+            elif 'AutoModel' in config.auto_map:
+                model_class_ref = config.auto_map['AutoModel']
+
+        if model_class_ref:
             print(f"Loading custom model: {model_class_ref}")
 
             # Import the module containing the custom class
@@ -449,7 +457,7 @@ class NvidiaReranker:
             else:
                 raise RuntimeError(f"Could not find custom model module {module_name} in transformers_modules")
         else:
-            raise RuntimeError("Model does not have auto_map configuration")
+            raise RuntimeError(f"Model does not have compatible auto_map. Available keys: {list(config.auto_map.keys()) if hasattr(config, 'auto_map') else 'None'}")
 
         self.model = self.model.to(device)
         self.model.eval()
