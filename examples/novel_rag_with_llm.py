@@ -109,7 +109,7 @@ class KimiLLM:
         self,
         question: str,
         passages: List[Tuple[str, float, Dict]],
-        max_tokens: int = 1000,
+        max_tokens: int = 2000,
         stream: bool = False
     ):
         """Synthesize answer from retrieved passages.
@@ -503,15 +503,23 @@ class NovelRAGWithLLM:
 
             # Print streaming response
             full_answer = ""
+            finish_reason = None
             try:
                 for chunk in stream:
-                    if hasattr(chunk.choices[0].delta, 'content'):
+                    if chunk.choices[0].delta.content:
                         content = chunk.choices[0].delta.content
-                        if content:
-                            print(content, end='', flush=True)
-                            full_answer += content
+                        print(content, end='', flush=True)
+                        full_answer += content
+
+                    # Check if stream finished
+                    if chunk.choices[0].finish_reason:
+                        finish_reason = chunk.choices[0].finish_reason
             except Exception as e:
-                print(f"\nError during streaming: {e}")
+                print(f"\n\n⚠️  Streaming error: {e}")
+
+            # Warn if truncated
+            if finish_reason == "length":
+                print(f"\n\n⚠️  Response truncated (hit token limit). Try asking for a shorter answer.")
 
             llm_time = time.time() - start_llm
             total_time = search_time + llm_time
