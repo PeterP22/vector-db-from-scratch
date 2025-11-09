@@ -719,19 +719,28 @@ class NovelRAGWithLLM:
         self.llm = KimiLLM(model=kimi_model)
 
         # Initialize Re-ranker (optional)
-        print("\nInitializing Re-ranker")
+        # NOTE: Re-ranking takes 60+ seconds to load (4.6GB model)
+        # Uncomment below to enable (provides ~5% quality improvement)
+        # For faster startup, skip re-ranking - HNSW gives great results alone
+        print("\nSkipping Re-ranker (for faster startup)")
         print("-" * 80)
-        try:
-            start_reranker = time.time()
-            self.reranker = NvidiaReranker(use_gpu=use_gpu)
-            reranker_load_time = time.time() - start_reranker
-            print(f"✓ Re-ranker loaded in {reranker_load_time:.1f}s")
-            self.use_reranking = True
-        except Exception as e:
-            print(f"⚠️  Could not load re-ranker: {e}")
-            print("⚠️  Continuing without re-ranking (will use vector search only)")
-            self.reranker = None
-            self.use_reranking = False
+        print("⚠️  Re-ranking disabled to save 60+ seconds of startup time")
+        print("💡 To enable: uncomment re-ranker code in 4_complete_rag_system.py")
+        self.reranker = None
+        self.use_reranking = False
+
+        # Uncomment below to enable re-ranking:
+        # try:
+        #     start_reranker = time.time()
+        #     self.reranker = NvidiaReranker(use_gpu=use_gpu)
+        #     reranker_load_time = time.time() - start_reranker
+        #     print(f"✓ Re-ranker loaded in {reranker_load_time:.1f}s")
+        #     self.use_reranking = True
+        # except Exception as e:
+        #     print(f"⚠️  Could not load re-ranker: {e}")
+        #     print("⚠️  Continuing without re-ranking (will use vector search only)")
+        #     self.reranker = None
+        #     self.use_reranking = False
 
         print("\n" + "=" * 80)
         if self.use_reranking:
