@@ -432,10 +432,16 @@ class NvidiaReranker:
             device = "cpu"
 
         print(f"Loading re-ranker: {model_name}...")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
 
-        # Download config so that any custom modeling code is pulled as well
+        # Step 1: Load tokenizer
+        step_start = time.time()
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, trust_remote_code=True)
+        print(f"  ✓ Tokenizer loaded ({time.time() - step_start:.1f}s)")
+
+        # Step 2: Download config and custom code
+        step_start = time.time()
         config = AutoConfig.from_pretrained(model_name, trust_remote_code=True)
+        print(f"  ✓ Config loaded ({time.time() - step_start:.1f}s)")
         model_type = getattr(config, "model_type", "unknown")
         auto_map = getattr(config, "auto_map", None)
         print(f"Model config: {model_type}")
@@ -455,7 +461,8 @@ class NvidiaReranker:
 
         print(f"Loading custom model: {custom_class_ref}")
 
-        # Use Hugging Face dynamic module loader so we don't have to guess local cache paths.
+        # Step 3: Import custom model class
+        step_start = time.time()
         code_revision = getattr(config, "_commit_hash", None)
         try:
             ModelClass = get_class_from_dynamic_module(
@@ -464,6 +471,7 @@ class NvidiaReranker:
                 revision=code_revision,
                 code_revision=code_revision,
             )
+            print(f"  ✓ Custom model class imported ({time.time() - step_start:.1f}s)")
         except Exception as import_error:
             raise RuntimeError(
                 f"Failed to import custom re-ranker class {custom_class_ref}: {import_error}"
@@ -517,19 +525,27 @@ class NvidiaReranker:
         except ValueError:
             pass
 
+        # Step 4: Load model weights (THIS IS THE SLOW PART - 2.5GB)
+        step_start = time.time()
         try:
             self.model = ModelClass.from_pretrained(
                 model_name,
                 config=config,
                 trust_remote_code=True,
+                low_cpu_mem_usage=True,  # Faster loading
+                torch_dtype=torch.float16 if device != "cpu" else torch.float32,  # Use FP16 on GPU for speed
             )
+            print(f"  ✓ Model weights loaded from disk ({time.time() - step_start:.1f}s)")
         except Exception as load_error:
             raise RuntimeError(
                 f"Failed to load custom re-ranker weights for {model_name}: {load_error}"
             ) from load_error
-        print("✓ Loaded custom re-ranker from dynamic module")
 
+        # Step 5: Move to GPU (THIS CAN ALSO BE SLOW - copying 2.5GB to GPU)
+        step_start = time.time()
         self.model = self.model.to(device)
+        print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
+
         self.model.eval()
         self.device = device
         self.model_name = model_name
