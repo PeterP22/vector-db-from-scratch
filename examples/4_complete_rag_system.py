@@ -692,7 +692,10 @@ class NovelRAGWithLLM:
         print("\nInitializing Re-ranker")
         print("-" * 80)
         try:
+            start_reranker = time.time()
             self.reranker = NvidiaReranker(use_gpu=use_gpu)
+            reranker_load_time = time.time() - start_reranker
+            print(f"✓ Re-ranker loaded in {reranker_load_time:.1f}s")
             self.use_reranking = True
         except Exception as e:
             print(f"⚠️  Could not load re-ranker: {e}")
@@ -779,6 +782,8 @@ class NovelRAGWithLLM:
                 print(f"{emoji} Web search: {status}")
                 if web_search_enabled:
                     print("  → Answers will be enriched with real-time internet data")
+                    print("  ⚠️  Note: Web search may cause empty responses (tool call handling needed)")
+                    print("  💡 If you get blank responses, type 'web' again to turn it off")
                 else:
                     print("  → Answers will use only the book passages")
                 continue
@@ -844,20 +849,40 @@ class NovelRAGWithLLM:
             finish_reason = None
             try:
                 for chunk in stream:
-                    if chunk.choices[0].delta.content:
-                        content = chunk.choices[0].delta.content
-                        print(content, end='', flush=True)
-                        full_answer += content
+                    # Handle tool calls (web search)
+                    if hasattr(chunk.choices[0], 'delta'):
+                        delta = chunk.choices[0].delta
+
+                        # Check for tool calls
+                        if hasattr(delta, 'tool_calls') and delta.tool_calls:
+                            print(f"\n🔧 [LLM is using web search tool...]", flush=True)
+                            # Note: Full tool call handling requires multi-turn conversation
+                            # For now, we'll just note that it's happening
+
+                        # Stream content if available
+                        if hasattr(delta, 'content') and delta.content:
+                            content = delta.content
+                            print(content, end='', flush=True)
+                            full_answer += content
 
                     # Check if stream finished
-                    if chunk.choices[0].finish_reason:
+                    if hasattr(chunk.choices[0], 'finish_reason') and chunk.choices[0].finish_reason:
                         finish_reason = chunk.choices[0].finish_reason
+                        if finish_reason == "tool_calls":
+                            print(f"\n\n⚠️  Web search requires multi-turn tool handling (not yet implemented)")
+                            print(f"⚠️  Tip: Turn off web search ('web' command) for now")
             except Exception as e:
                 print(f"\n\n⚠️  Streaming error: {e}")
+                import traceback
+                traceback.print_exc()
 
-            # Warn if truncated
+            # Warn if truncated or tool call
             if finish_reason == "length":
                 print(f"\n\n⚠️  Response truncated (hit token limit). Try asking for a shorter answer.")
+            elif finish_reason == "tool_calls" and not full_answer:
+                print(f"\n💡 Web search attempted but requires manual tool execution")
+                print(f"   Turning off web search for you...")
+                web_search_enabled = False
 
             llm_time = time.time() - start_llm
             total_time = search_time + rerank_time + llm_time
