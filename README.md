@@ -35,6 +35,7 @@ A complete production-grade vector database implementation from first principles
   - `kimi-k2-0905-preview` (256K context window)
   - Streaming responses for real-time interaction
   - OpenAI-compatible API
+  - **Web search integration** (toggle on/off for enriched answers)
 
 ### Compression & Optimization
 - **Scalar Quantization**: 4x compression (float32 → uint8)
@@ -71,9 +72,10 @@ python examples/4_complete_rag_system.py
 - ✅ Nvidia embeddings with Mac GPU acceleration
 - ✅ Two-stage retrieval: Vector search (15 candidates) → Re-ranking (top 5)
 - ✅ Kimi K2 LLM for synthesized answers
+- ✅ Web search toggle (enriches answers with real-time internet data)
 - ✅ Streaming responses (see answers appear word-by-word)
 - ✅ Smart caching (instant reload after first run)
-- ✅ Interactive Q&A mode
+- ✅ Interactive Q&A mode with commands ('web', 'raw', 'quit')
 
 **Example:**
 ```

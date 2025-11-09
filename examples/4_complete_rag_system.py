@@ -15,6 +15,7 @@ RAG Components (all of them!):
 ✅ Vector search (HNSW index - retrieves top 15)
 ✅ Re-ranking (Nvidia Nemotron - narrows to top 5)
 ✅ LLM synthesis (Kimi K2 Turbo)
+✅ Web search (optional - enriches answers with real-time internet data)
 ✅ Streaming output (real-time responses)
 ✅ Smart caching (instant reload)
 
@@ -56,7 +57,14 @@ Usage:
 Customization:
     - Edit prompts/system_prompt.txt to change LLM behavior
     - Edit prompts/user_prompt_template.txt to change query format
-    - Adjust temperature in code (line 161) for creativity vs focus
+    - Adjust temperature in code (line 224) for creativity vs focus
+    - Type 'web' during Q&A to toggle web search on/off
+
+Interactive Commands:
+    - Type your question to get an answer
+    - 'web' - Toggle web search (enriches with internet data)
+    - 'raw' - Show the retrieved passages
+    - 'quit' or 'exit' - End the session
 
 Previous: 3_rag_retrieval_only.py (RAG without LLM)
 This is the final example - you've mastered production RAG! 🎉
@@ -182,7 +190,8 @@ class KimiLLM:
         question: str,
         passages: List[Tuple[str, float, Dict]],
         max_tokens: int = 1000,
-        stream: bool = False
+        stream: bool = False,
+        web_search: bool = False
     ):
         """Synthesize answer from retrieved passages.
 
@@ -191,6 +200,7 @@ class KimiLLM:
             passages: List of (text, similarity, metadata) tuples
             max_tokens: Maximum tokens in response
             stream: Whether to stream the response (yields chunks if True)
+            web_search: Whether to enable web search for enriched answers
 
         Returns:
             Synthesized answer string (if stream=False) or generator (if stream=True)
@@ -212,16 +222,28 @@ class KimiLLM:
 
         # Call Kimi API
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            # Build request parameters
+            request_params = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.3,
-                max_tokens=max_tokens,
-                stream=stream
-            )
+                "temperature": 0.3,
+                "max_tokens": max_tokens,
+                "stream": stream
+            }
+
+            # Add web search tool if enabled
+            if web_search:
+                request_params["tools"] = [
+                    {
+                        "type": "builtin_function",
+                        "function": {"name": "$web_search"}
+                    }
+                ]
+
+            response = self.client.chat.completions.create(**request_params)
 
             if stream:
                 # Return generator for streaming
@@ -712,9 +734,13 @@ class NovelRAGWithLLM:
         print("💬 Interactive Q&A with Kimi LLM (Streaming)")
         print("=" * 80)
         print("Ask questions about your novel.")
-        print("Commands: 'quit'/'exit' to stop, 'raw' to toggle passage display\n")
+        print("Commands:")
+        print("  - 'quit'/'exit': Stop the session")
+        print("  - 'raw': Toggle passage display")
+        print("  - 'web': Toggle web search (enriches answers with internet data)\n")
 
         show_raw_passages = False
+        web_search_enabled = False
         question_count = 0
 
         while True:
@@ -735,6 +761,17 @@ class NovelRAGWithLLM:
                 show_raw_passages = not show_raw_passages
                 status = "ON" if show_raw_passages else "OFF"
                 print(f"✓ Raw passage display: {status}")
+                continue
+
+            if question.lower() == 'web':
+                web_search_enabled = not web_search_enabled
+                status = "ON" if web_search_enabled else "OFF"
+                emoji = "🌐" if web_search_enabled else "📚"
+                print(f"{emoji} Web search: {status}")
+                if web_search_enabled:
+                    print("  → Answers will be enriched with real-time internet data")
+                else:
+                    print("  → Answers will use only the book passages")
                 continue
 
             question_count += 1
@@ -784,11 +821,14 @@ class NovelRAGWithLLM:
 
             # Stream LLM response
             print(f"\n{'='*80}")
-            print(f"🤖 Kimi's Answer (streaming...)")
+            if web_search_enabled:
+                print(f"🤖 Kimi's Answer with Web Search (streaming...)")
+            else:
+                print(f"🤖 Kimi's Answer (streaming...)")
             print(f"{'='*80}\n")
 
             start_llm = time.time()
-            stream = self.llm.synthesize_answer(question, passages, stream=True)
+            stream = self.llm.synthesize_answer(question, passages, stream=True, web_search=web_search_enabled)
 
             # Print streaming response
             full_answer = ""
