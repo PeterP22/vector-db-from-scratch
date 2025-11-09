@@ -27,6 +27,8 @@ A complete production-grade vector database implementation from first principles
   - `llama-3.2-nv-rerankqa-1b-v2` (1B params, re-ranking)
   - 2048-4096 dimensional embeddings
   - GPU acceleration (4x faster than CPU)
+  - FP16 inference (2x faster, 50% less memory)
+  - **Safetensors optimization** (20x faster model loading: 3s vs 60s)
   - Two-stage retrieval: Vector search → Re-ranking
 
 ### LLM Integration
@@ -35,7 +37,7 @@ A complete production-grade vector database implementation from first principles
   - `kimi-k2-0905-preview` (256K context window)
   - Streaming responses for real-time interaction
   - OpenAI-compatible API
-  - **Web search integration** (toggle on/off for enriched answers)
+  - ⚠️ Web search (experimental - requires multi-turn tool call handling)
 
 ### Compression & Optimization
 - **Scalar Quantization**: 4x compression (float32 → uint8)
@@ -43,6 +45,8 @@ A complete production-grade vector database implementation from first principles
 - **SIMD Optimizations**: Vectorized distance computations (4-37x speedup)
 - **Asymmetric Distance Computation (ADC)**: Efficient PQ search
 - **Smart Caching**: Embeddings cached to disk for instant reload
+- **FP16 Inference**: Half-precision on GPU for 2x faster processing
+- **Safetensors Loading**: Memory-mapped loading for 20x faster model startup
 
 ### Production Features
 - **GPU Acceleration**: Mac Metal (MPS), NVIDIA CUDA support
@@ -69,13 +73,14 @@ python examples/4_complete_rag_system.py
 ```
 
 **Features:**
-- ✅ Nvidia embeddings with Mac GPU acceleration
+- ✅ Nvidia embeddings with Mac GPU acceleration + FP16
 - ✅ Two-stage retrieval: Vector search (15 candidates) → Re-ranking (top 5)
+- ✅ Safetensors optimization (3-second model loading)
 - ✅ Kimi K2 LLM for synthesized answers
-- ✅ Web search toggle (enriches answers with real-time internet data)
 - ✅ Streaming responses (see answers appear word-by-word)
 - ✅ Smart caching (instant reload after first run)
-- ✅ Interactive Q&A mode with commands ('web', 'raw', 'quit')
+- ✅ Interactive Q&A mode with commands ('raw', 'quit')
+- ⚠️ Web search (experimental - requires multi-turn tool handling)
 
 **Example:**
 ```
@@ -86,7 +91,7 @@ python examples/4_complete_rag_system.py
 Based on the passages from your novel, the main theme revolves around...
 [answer streams in real-time, citing specific pages]
 
-⏱️  Search: 155ms | Re-rank: 230ms | LLM: 5.2s | Total: 5.6s
+⏱️  Search: 155ms | Re-rank: 2.4s | LLM: 5.2s | Total: 7.8s
 ```
 
 #### Nvidia Re-ranker Requirements
