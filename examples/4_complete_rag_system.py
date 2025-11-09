@@ -364,13 +364,18 @@ class NvidiaEmbedder:
             model_name,
             trust_remote_code=True,
             low_cpu_mem_usage=True,
-            torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+            torch_dtype=torch.float32,  # Load in FP32 (faster), convert to FP16 on GPU
         )
         print(f"  ✓ Model loaded from disk ({time.time() - step_start:.1f}s)")
 
         step_start = time.time()
-        self.model = self.model.to(device)
-        print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
+        if device != "cpu":
+            # Convert to FP16 on GPU for 2x faster inference
+            self.model = self.model.to(device).half()
+            print(f"  ✓ Model moved to {device.upper()} and converted to FP16 ({time.time() - step_start:.1f}s)")
+        else:
+            self.model = self.model.to(device)
+            print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
 
         self.model.eval()
         self.device = device
@@ -539,15 +544,16 @@ class NvidiaReranker:
         except ValueError:
             pass
 
-        # Step 4: Load model weights (THIS IS THE SLOW PART - 2.5GB)
+        # Step 4: Load model weights (THIS IS THE SLOW PART - 4.6GB)
+        # Try loading in FP32 first (faster on Mac MPS), then convert to FP16
         step_start = time.time()
         try:
             self.model = ModelClass.from_pretrained(
                 model_name,
                 config=config,
                 trust_remote_code=True,
-                low_cpu_mem_usage=True,  # Faster loading
-                torch_dtype=torch.float16 if device != "cpu" else torch.float32,  # Use FP16 on GPU for speed
+                low_cpu_mem_usage=True,
+                torch_dtype=torch.float32,  # Load in FP32 first (faster)
             )
             print(f"  ✓ Model weights loaded from disk ({time.time() - step_start:.1f}s)")
         except Exception as load_error:
@@ -555,10 +561,15 @@ class NvidiaReranker:
                 f"Failed to load custom re-ranker weights for {model_name}: {load_error}"
             ) from load_error
 
-        # Step 5: Move to GPU (THIS CAN ALSO BE SLOW - copying 2.5GB to GPU)
+        # Step 5: Move to GPU and convert to FP16 for faster inference
         step_start = time.time()
-        self.model = self.model.to(device)
-        print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
+        if device != "cpu":
+            # Convert to FP16 on GPU for 2x faster inference & 50% less memory
+            self.model = self.model.to(device).half()
+            print(f"  ✓ Model moved to {device.upper()} and converted to FP16 ({time.time() - step_start:.1f}s)")
+        else:
+            self.model = self.model.to(device)
+            print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
 
         self.model.eval()
         self.device = device
