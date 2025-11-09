@@ -355,9 +355,23 @@ class NvidiaEmbedder:
             device = "cpu"
 
         print(f"Loading {model_name}...")
+        step_start = time.time()
         self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name, trust_remote_code=True)
+        print(f"  ✓ Tokenizer loaded ({time.time() - step_start:.1f}s)")
+
+        step_start = time.time()
+        self.model = AutoModel.from_pretrained(
+            model_name,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+        )
+        print(f"  ✓ Model loaded from disk ({time.time() - step_start:.1f}s)")
+
+        step_start = time.time()
         self.model = self.model.to(device)
+        print(f"  ✓ Model moved to {device.upper()} ({time.time() - step_start:.1f}s)")
+
         self.model.eval()
         self.device = device
         self.model_name = model_name
