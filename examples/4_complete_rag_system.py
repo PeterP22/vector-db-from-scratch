@@ -217,6 +217,15 @@ class KimiLLM:
         system_prompt = load_prompt("system_prompt.txt")
         user_prompt_template = load_prompt("user_prompt_template.txt")
 
+        # Add web search instructions if enabled
+        if web_search:
+            system_prompt += "\n\nIMPORTANT: You have access to web search. Use it to:\n"
+            system_prompt += "- Find current data, statistics, and research\n"
+            system_prompt += "- Verify facts and provide up-to-date context\n"
+            system_prompt += "- Compare book advice with modern trends and studies\n"
+            system_prompt += "- Enrich your answer with real-world examples from recent sources\n"
+            system_prompt += "Always cite web sources when you use them."
+
         # Format user prompt with question and context
         user_prompt = user_prompt_template.format(question=question, context=context)
 
