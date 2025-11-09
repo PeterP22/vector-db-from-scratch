@@ -145,6 +145,12 @@ except ImportError:
     print("Error: openai not installed. Install with: pip install openai")
     sys.exit(1)
 
+try:
+    from huggingface_hub import snapshot_download
+    HF_HUB_AVAILABLE = True
+except ImportError:
+    HF_HUB_AVAILABLE = False
+
 
 @dataclass
 class Chunk:
@@ -547,13 +553,35 @@ class NvidiaReranker:
         # Step 4: Load model weights (THIS IS THE SLOW PART - 4.6GB)
         # Try loading in FP32 first (faster on Mac MPS), then convert to FP16
         step_start = time.time()
+        load_source = model_name
+        use_safetensors = False
+
+        if HF_HUB_AVAILABLE:
+            try:
+                snapshot_path = Path(snapshot_download(model_name, local_files_only=True))
+                safetensors_path = snapshot_path / "model.safetensors"
+                if safetensors_path.exists():
+                    load_source = str(snapshot_path)
+                    use_safetensors = True
+                    print(f"  ✓ Using local safetensors checkpoint ({safetensors_path}) for faster load")
+            except Exception:
+                # Ignore cache lookup failures and fall back to default behavior
+                pass
+
+        load_kwargs = dict(
+            config=config,
+            trust_remote_code=True,
+            low_cpu_mem_usage=True,
+            torch_dtype=torch.float32,
+        )
+        if use_safetensors:
+            load_kwargs["use_safetensors"] = True
+            load_kwargs["local_files_only"] = True
+
         try:
             self.model = ModelClass.from_pretrained(
-                model_name,
-                config=config,
-                trust_remote_code=True,
-                low_cpu_mem_usage=True,
-                torch_dtype=torch.float32,  # Load in FP32 first (faster)
+                load_source,
+                **load_kwargs,
             )
             print(f"  ✓ Model weights loaded from disk ({time.time() - step_start:.1f}s)")
         except Exception as load_error:
