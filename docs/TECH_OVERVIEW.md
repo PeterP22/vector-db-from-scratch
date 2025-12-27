@@ -1,6 +1,6 @@
 # Vector DB from Scratch — End-to-End Technical Walkthrough
 
-Last updated: 2024-11-09
+Last updated: 2025-11-09
 
 This document reverse-engineers the entire project from first principles so you can confidently explain (or film) every subsystem—document ingestion, embedding, indexing, retrieval, re-ranking, prompt engineering, and LLM synthesis. Treat it as both a study guide and a long-form script outline for a YouTube deep dive.
 
