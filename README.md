@@ -2,16 +2,16 @@
 
 A complete production-grade vector database implementation from first principles, featuring 5 search algorithms, state-of-the-art embeddings, and LLM integration for RAG applications.
 
-## 🎯 What Makes This Special
+## What Makes This Special
 
 - **Built from Scratch**: Every algorithm implemented from first principles for deep understanding
 - **Production Embeddings**: Nvidia Nemotron models for high-quality vector representations
-- **LLM Integration**: Kimi K2 (Chinese LLM) for intelligent answer synthesis
+- **LLM Integration**: Kimi K2 (Moonshot AI) for intelligent answer synthesis
 - **GPU Accelerated**: Mac Metal (MPS) and CUDA support for fast inference
 - **Complete RAG System**: Novel Q&A with streaming responses and smart caching
 - **Educational**: Extensive documentation showing how everything works under the hood
 
-## 🚀 Features
+## Features
 
 ### Search Algorithms (5 Implementations)
 - **Linear Scan**: Brute force baseline with 100% recall
@@ -57,7 +57,7 @@ A complete production-grade vector database implementation from first principles
 
 ## Quick Start
 
-### 1. Novel RAG with Kimi LLM (Recommended) ⭐
+### 1. Novel RAG with Kimi LLM (Recommended)
 
 The complete RAG experience with GPU acceleration, streaming responses, and intelligent answers:
 
@@ -157,7 +157,7 @@ distance_table = pq.compute_distance_table(query)
 distances = pq.adc_distance_batch(codes, distance_table)
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 vector-db-from-scratch/
@@ -380,4 +380,4 @@ This implementation is based on research and production systems:
 
 ## License
 
-MIT - Built for educational purposes to understand vector database internals from first principles.
+MIT, see [LICENSE](LICENSE). Built for educational purposes to understand vector database internals from first principles.
