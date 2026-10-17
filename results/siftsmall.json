@@ -1,0 +1,572 @@
+{
+  "dataset": {
+    "name": "SIFT-small",
+    "n_base": 10000,
+    "n_queries": 100,
+    "dim": 128,
+    "k": 10,
+    "quick": false
+  },
+  "metadata": {
+    "date": "2026-10-17T12:12:51+00:00",
+    "platform": "Linux-6.12.94+-x86_64-with-glibc2.41",
+    "cpu_model": "Intel(R) Xeon(R) Processor",
+    "cpu_count": 8,
+    "python": "3.13.5",
+    "numpy": "2.5.4",
+    "faiss": "1.15.1",
+    "git_commit": "01193c6"
+  },
+  "config": {
+    "sweeps": {
+      "max_queries": null,
+      "lsh": [
+        [
+          2,
+          8
+        ],
+        [
+          2,
+          12
+        ],
+        [
+          2,
+          16
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          8,
+          12
+        ],
+        [
+          8,
+          16
+        ],
+        [
+          32,
+          8
+        ],
+        [
+          32,
+          12
+        ],
+        [
+          32,
+          16
+        ]
+      ],
+      "hnsw_build": {
+        "M": 16,
+        "ef_construction": 100
+      },
+      "hnsw_ef": [
+        10,
+        20,
+        40,
+        80,
+        160,
+        320
+      ],
+      "ivf_build": {
+        "n_clusters": 100
+      },
+      "ivf_n_probe": [
+        1,
+        2,
+        4,
+        8,
+        16,
+        32
+      ]
+    },
+    "max_seconds_per_point": 300.0,
+    "timing": "single-query wall clock (time.perf_counter), 1 warm-up query excluded"
+  },
+  "indexes": [
+    {
+      "name": "LinearScan",
+      "family": "ours",
+      "build_params": {},
+      "build_seconds": 0.00036494500091066584,
+      "knob": null,
+      "points": [
+        {
+          "params": {},
+          "build_seconds": 0.00036494500091066584,
+          "recall": 1.0,
+          "qps": 97.57307552863182,
+          "mean_latency_ms": 10.24872890991901,
+          "p50_latency_ms": 9.955310000805184,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "Exact; Python loop over all vectors."
+    },
+    {
+      "name": "KDTree",
+      "family": "ours",
+      "build_params": {},
+      "build_seconds": 0.03162394399987534,
+      "knob": null,
+      "points": [
+        {
+          "params": {},
+          "build_seconds": 0.03162394399987534,
+          "recall": 1.0,
+          "qps": 69.25122041026688,
+          "mean_latency_ms": 14.440178730073967,
+          "p50_latency_ms": 14.148873000522144,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "Exact; median-split KD-tree with branch-and-bound. In high dimensions pruning is weak, so most nodes are visited."
+    },
+    {
+      "name": "LSH",
+      "family": "ours",
+      "build_params": {
+        "metric": "l2"
+      },
+      "build_seconds": null,
+      "knob": "num_tables x num_bits (rebuilt per combo)",
+      "points": [
+        {
+          "params": {
+            "num_tables": 2,
+            "num_bits": 8
+          },
+          "build_seconds": 0.09548860600079934,
+          "recall": 0.474,
+          "qps": 911.1962113748018,
+          "mean_latency_ms": 1.097458469994308,
+          "p50_latency_ms": 1.022187499984284,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 863.3168316831683
+        },
+        {
+          "params": {
+            "num_tables": 2,
+            "num_bits": 12
+          },
+          "build_seconds": 0.1297465879997617,
+          "recall": 0.312,
+          "qps": 1839.1087351262079,
+          "mean_latency_ms": 0.5437416401218798,
+          "p50_latency_ms": 0.4443435000212048,
+          "n_queries": 100,
+          "short_results": 2,
+          "capped": null,
+          "avg_candidates": 349.16831683168317
+        },
+        {
+          "params": {
+            "num_tables": 2,
+            "num_bits": 16
+          },
+          "build_seconds": 0.17371424899829435,
+          "recall": 0.141,
+          "qps": 3903.4913307945544,
+          "mean_latency_ms": 0.25618091991418623,
+          "p50_latency_ms": 0.2238750003016321,
+          "n_queries": 100,
+          "short_results": 24,
+          "capped": null,
+          "avg_candidates": 57.42574257425743
+        },
+        {
+          "params": {
+            "num_tables": 8,
+            "num_bits": 8
+          },
+          "build_seconds": 0.3491840989991033,
+          "recall": 0.884,
+          "qps": 379.6311719215516,
+          "mean_latency_ms": 2.63413563996437,
+          "p50_latency_ms": 2.734476499426819,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 2285.5346534653463
+        },
+        {
+          "params": {
+            "num_tables": 8,
+            "num_bits": 12
+          },
+          "build_seconds": 0.548538032999204,
+          "recall": 0.647,
+          "qps": 859.5846030394445,
+          "mean_latency_ms": 1.1633526199329935,
+          "p50_latency_ms": 1.0559740003373008,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 748.6039603960396
+        },
+        {
+          "params": {
+            "num_tables": 8,
+            "num_bits": 16
+          },
+          "build_seconds": 0.755768975999672,
+          "recall": 0.394,
+          "qps": 2211.9357384149293,
+          "mean_latency_ms": 0.45209269990664325,
+          "p50_latency_ms": 0.43246599943813635,
+          "n_queries": 100,
+          "short_results": 1,
+          "capped": null,
+          "avg_candidates": 194.62376237623764
+        },
+        {
+          "params": {
+            "num_tables": 32,
+            "num_bits": 8
+          },
+          "build_seconds": 1.417511972000284,
+          "recall": 1.0,
+          "qps": 149.0363966813079,
+          "mean_latency_ms": 6.709770380039117,
+          "p50_latency_ms": 6.641052000304626,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 5770.079207920792
+        },
+        {
+          "params": {
+            "num_tables": 32,
+            "num_bits": 12
+          },
+          "build_seconds": 2.3025533060008456,
+          "recall": 0.966,
+          "qps": 299.45881921802055,
+          "mean_latency_ms": 3.3393573200191895,
+          "p50_latency_ms": 3.340117001243925,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 2396.5742574257424
+        },
+        {
+          "params": {
+            "num_tables": 32,
+            "num_bits": 16
+          },
+          "build_seconds": 2.98436638199928,
+          "recall": 0.851,
+          "qps": 604.2367302865367,
+          "mean_latency_ms": 1.6549804900569143,
+          "p50_latency_ms": 1.5908969990050537,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null,
+          "avg_candidates": 951.1485148514852
+        }
+      ],
+      "notes": "Random-hyperplane (SimHash) hashing through the origin, i.e. buckets approximate cosine similarity; candidates from all tables are re-ranked by exact L2 (metric=L2). Queries with no candidates return no results."
+    },
+    {
+      "name": "HNSW",
+      "family": "ours",
+      "build_params": {
+        "M": 16,
+        "ef_construction": 100
+      },
+      "build_seconds": 53.3849753229988,
+      "knob": "ef",
+      "points": [
+        {
+          "params": {
+            "ef": 10
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 0.932,
+          "qps": 1227.131318823885,
+          "mean_latency_ms": 0.8149087099809549,
+          "p50_latency_ms": 0.5496419998962665,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "ef": 20
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 0.98,
+          "qps": 1260.4637716382113,
+          "mean_latency_ms": 0.7933587799197994,
+          "p50_latency_ms": 0.7400814993161475,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "ef": 40
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 0.994,
+          "qps": 1025.8953003307472,
+          "mean_latency_ms": 0.9747583400348958,
+          "p50_latency_ms": 0.9821319999900879,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "ef": 80
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 0.998,
+          "qps": 545.9032461470212,
+          "mean_latency_ms": 1.8318264400477346,
+          "p50_latency_ms": 1.6593599993939279,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "ef": 160
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 1.0,
+          "qps": 331.26032499603724,
+          "mean_latency_ms": 3.018773829953716,
+          "p50_latency_ms": 2.4099325000861427,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "ef": 320
+          },
+          "build_seconds": 53.3849753229988,
+          "recall": 1.0,
+          "qps": 181.2582171865167,
+          "mean_latency_ms": 5.516991259883071,
+          "p50_latency_ms": 4.05919150034606,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "Layer-0 degree is 2*M (M_max defaults to 2*M when M_max <= M)."
+    },
+    {
+      "name": "IVF",
+      "family": "ours",
+      "build_params": {
+        "n_clusters": 100
+      },
+      "build_seconds": 34.995542116999786,
+      "knob": "n_probe",
+      "points": [
+        {
+          "params": {
+            "n_probe": 1
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 0.552,
+          "qps": 3968.651305287002,
+          "mean_latency_ms": 0.25197477003530366,
+          "p50_latency_ms": 0.17554500027472386,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "n_probe": 2
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 0.724,
+          "qps": 2595.204964814451,
+          "mean_latency_ms": 0.38532601993210847,
+          "p50_latency_ms": 0.2904104994740919,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "n_probe": 4
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 0.858,
+          "qps": 1944.9789572353384,
+          "mean_latency_ms": 0.5141443799584522,
+          "p50_latency_ms": 0.5068585005574278,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "n_probe": 8
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 0.954,
+          "qps": 985.0930499659594,
+          "mean_latency_ms": 1.015132529901166,
+          "p50_latency_ms": 1.0057309991680086,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "n_probe": 16
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 0.995,
+          "qps": 455.7086612765501,
+          "mean_latency_ms": 2.1943844499219267,
+          "p50_latency_ms": 2.1252020005704253,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "n_probe": 32
+          },
+          "build_seconds": 34.995542116999786,
+          "recall": 1.0,
+          "qps": 238.1925584695012,
+          "mean_latency_ms": 4.1982839700176555,
+          "p50_latency_ms": 4.117179999411746,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "k-means++ coarse quantizer, exact L2 within probed lists."
+    },
+    {
+      "name": "faiss IndexFlatL2",
+      "family": "faiss",
+      "build_params": {},
+      "build_seconds": 0.0023436369992850814,
+      "knob": null,
+      "points": [
+        {
+          "params": {},
+          "build_seconds": 0.0023436369992850814,
+          "recall": 1.0,
+          "qps": 5762.958675464114,
+          "mean_latency_ms": 0.17352197999571217,
+          "p50_latency_ms": 0.16912149931158638,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "Reference: exact brute force, omp_set_num_threads(1)."
+    },
+    {
+      "name": "faiss IndexHNSWFlat",
+      "family": "faiss",
+      "build_params": {
+        "M": 16,
+        "efConstruction": 100
+      },
+      "build_seconds": 0.49065271399922494,
+      "knob": "efSearch",
+      "points": [
+        {
+          "params": {
+            "efSearch": 10
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 0.907,
+          "qps": 94315.24301090009,
+          "mean_latency_ms": 0.01060274000337813,
+          "p50_latency_ms": 0.010284999916621018,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "efSearch": 20
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 0.964,
+          "qps": 68477.06373615387,
+          "mean_latency_ms": 0.014603429899580078,
+          "p50_latency_ms": 0.014405500223801937,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "efSearch": 40
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 0.991,
+          "qps": 43783.68054972537,
+          "mean_latency_ms": 0.02283956002429477,
+          "p50_latency_ms": 0.02257049982290482,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "efSearch": 80
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 0.998,
+          "qps": 24505.719663544176,
+          "mean_latency_ms": 0.040806799952406436,
+          "p50_latency_ms": 0.04092600011063041,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "efSearch": 160
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 1.0,
+          "qps": 15436.741694296179,
+          "mean_latency_ms": 0.06478051001977292,
+          "p50_latency_ms": 0.06412350012396928,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        },
+        {
+          "params": {
+            "efSearch": 320
+          },
+          "build_seconds": 0.49065271399922494,
+          "recall": 1.0,
+          "qps": 8010.568824921067,
+          "mean_latency_ms": 0.12483507998695131,
+          "p50_latency_ms": 0.12346950097708032,
+          "n_queries": 100,
+          "short_results": 0,
+          "capped": null
+        }
+      ],
+      "notes": "Reference: same M/efConstruction as ours, omp_set_num_threads(1)."
+    }
+  ]
+}

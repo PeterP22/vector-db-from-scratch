@@ -221,7 +221,7 @@ class KMeans:
 
         # Get n_probe nearest
         n_probe = min(n_probe, self.n_clusters)
-        nearest_indices = np.argpartition(distances, n_probe)[:n_probe]
+        nearest_indices = np.argpartition(distances, n_probe - 1)[:n_probe]
         nearest_indices = nearest_indices[np.argsort(distances[nearest_indices])]
 
         return [(distances[i], i) for i in nearest_indices]
