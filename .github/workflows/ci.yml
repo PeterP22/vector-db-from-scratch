@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install numpy scipy pytest ruff matplotlib
+      - name: Lint
+        run: ruff check benchmarks tests
+      - name: Tests
+        run: python -m pytest -q
+      - name: Benchmark smoke (synthetic, quick)
+        run: |
+          python benchmarks/run.py --data synthetic --quick --out "$RUNNER_TEMP/synthetic_quick.json"
+          python benchmarks/plot.py "$RUNNER_TEMP/synthetic_quick.json" --out "$RUNNER_TEMP/recall_qps.png"
